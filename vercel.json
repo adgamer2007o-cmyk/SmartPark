@@ -1,15 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run vercel-build",
-  "outputDirectory": "frontend/dist",
-  "installCommand": "npm install",
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "backend/node_modules/.prisma/client/**"
+  "services": {
+    "smartpark-api": {
+      "root": "backend",
+      "framework": "express",
+      "buildCommand": "npm ci && npx prisma generate && npm run build"
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": { "service": "smartpark-api" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
   ]
 }
