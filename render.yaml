@@ -1,0 +1,39 @@
+# Render Blueprint: deploys the SmartPark API and a managed PostgreSQL database.
+# Dashboard -> New -> Blueprint -> pick this repo. Then set CLIENT_URL to the frontend origin.
+databases:
+  - name: smartpark-db
+    databaseName: smartpark
+    user: smartpark
+    plan: free
+
+services:
+  - type: web
+    name: smartpark-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npm run build
+    preDeployCommand: npx prisma db push
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartpark-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
