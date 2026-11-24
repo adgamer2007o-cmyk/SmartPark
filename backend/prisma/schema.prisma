@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  EV
+  TRUCK
+}
+
+enum SpotType {
+  STANDARD
+  COMPACT
+  MOTORCYCLE
+  EV_CHARGING
+  ACCESSIBLE
+  PREMIUM
+}
+
+enum SpotStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+  CANCELLED
+}
+
+enum BookingStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  EXTENDED
+}
+
+model User {
+  id                String           @id @default(cuid())
+  email             String           @unique
+  password          String?
+  name              String
+  role              Role            @default(USER)
+  phone             String?
+  googleId          String?         @unique
+  avatarUrl         String?
+  accessibility     Boolean          @default(false)
+  isActive          Boolean           @default(true)
+  stripeCustomerId String?
+  notifyEmail       Boolean          @default(true)
+  notifyInApp       Boolean          @default(true)
+  vehicles          Vehicle[]
+  bookings          Booking[]
+  refreshTokens     RefreshToken[]
+  favorites         FavoriteGround[]
+  spotPreferences    SpotPreference[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Vehicle {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licensePlate String      @unique
+  vehicleType  VehicleType
+  isDefault    Boolean      @default(false)
+  bookings     Booking[]
+  createdAt    DateTime    @default(now())
+}
+
+model ParkingGround {
+  id              String          @id @default(cuid())
+  name            String
+  location        String
+  description     String?
+  totalCapacity   Int
+  operatingHours  String
+  isActive        Boolean         @default(true)
+  layoutRows      Int             @default(5)
+  layoutCols      Int             @default(10)
+  entranceQRCode  String?
+  exitQRCode      String?
+  spots           ParkingSpot[]
+  bookings        Booking[]
+  pricingConfigs  PricingConfig[]
+  favorites       FavoriteGround[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model ParkingSpot {
+  id                 String        @id @default(cuid())
+  parkingGroundId    String
+  parkingGround      ParkingGround @relation(fields: [parkingGroundId], references: [id], onDelete: Cascade)
+  spotNumber         String
+  level              String?
+  row                String?
+  col                Int          @default(1)
+  spotType           SpotType
+  status             SpotStatus    @default(AVAILABLE)
+  distanceToEntrance Float
+  qrCode             String?
+  isAccessible       Boolean       @default(false)
+  reservedUntil      DateTime?
+  reservedByUserId   String?
+  bookings           Booking[]
+  preferences        SpotPreference[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([parkingGroundId, spotNumber])
+  @@index([parkingGroundId, status])
+}
+
+model FavoriteGround {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parkingGroundId String
+  parkingGround   ParkingGround @relation(fields: [parkingGroundId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@unique([userId, parkingGroundId])
+}
+
+model SpotPreference {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spotId    String
+  spot      ParkingSpot @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  useCount  Int         @default(1)
+  updatedAt DateTime    @updatedAt
+
+  @@unique([userId, spotId])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  vehicleId       String
+  vehicle         Vehicle       @relation(fields: [vehicleId], references: [id])
+  parkingGroundId String
+  parkingGround   ParkingGround @relation(fields: [parkingGroundId], references: [id])
+  spotId          String
+  spot            ParkingSpot  @relation(fields: [spotId], references: [id])
+  startTime       DateTime
+  endTime         DateTime
+  actualEndTime   DateTime?
+  durationHours   Float
+  basePrice       Float
+  totalPrice      Float
+  discountApplied Float         @default(0)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  bookingStatus   BookingStatus @default(ACTIVE)
+  stripePaymentId String?
+  qrCodeData      String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId, bookingStatus])
+  @@index([parkingGroundId, startTime])
+  @@index([spotId, bookingStatus])
+}
+
+model PricingConfig {
+  id                    String         @id @default(cuid())
+  parkingGroundId       String?        @unique
+  parkingGround         ParkingGround? @relation(fields: [parkingGroundId], references: [id])
+  baseHourlyRate        Float          @default(1.5)
+  firstHourFree         Boolean        @default(false)
+  tieredPricing         Json
+  dailyMaxCap           Float          @default(15.0)
+  studentDiscount       Float          @default(0.10)
+  premiumMultiplier     Float          @default(1.5)
+  evMultiplier          Float          @default(1.25)
+  weekendRateMultiplier  Float          @default(0.8)
+  eveningStartHour      Int            @default(18)
+  eveningRateMultiplier  Float          @default(0.85)
+  isDefault             Boolean        @default(true)
+  updatedAt             DateTime      @updatedAt
+}
+
+model AlgorithmConfig {
+  id                  String   @id @default(cuid())
+  distanceWeight      Float     @default(0.4)
+  typeMatchWeight     Float     @default(0.25)
+  preferenceWeight    Float     @default(0.15)
+  accessibilityWeight Float     @default(0.2)
+  congestionWeight    Float     @default(0.1)
+  updatedAt           DateTime  @updatedAt
+}
+
+model SystemSettings {
+  id                       String  @id @default(cuid())
+  maintenanceMode          Boolean @default(false)
+  notificationEmailEnabled Boolean @default(true)
+  expiryWarningMinutes     Int     @default(15)
+}

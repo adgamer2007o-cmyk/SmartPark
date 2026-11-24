@@ -1,0 +1,14 @@
+{
+  "info": {
+    "name": "SmartPark API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    { "name": "Auth Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/auth/login", "body": { "mode": "raw", "raw": "{\n  \"email\": \"student@smartpark.com\",\n  \"password\": \"student123\"\n}" } } },
+    { "name": "Auth Me", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+    { "name": "List Grounds", "request": { "method": "GET", "url": "{{baseUrl}}/grounds" } },
+    { "name": "Assign Spot", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/assign-spot", "body": { "mode": "raw", "raw": "{\n  \"parkingGroundId\": \"GROUND_ID\",\n  \"vehicleId\": \"VEHICLE_ID\",\n  \"scanType\": \"ENTRANCE\"\n}" } } },
+    { "name": "Admin Stats", "request": { "method": "GET", "url": "{{baseUrl}}/admin/stats" } }
+  ],
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4000/api" }]
+}
